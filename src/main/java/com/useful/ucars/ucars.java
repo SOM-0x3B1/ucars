@@ -8,6 +8,7 @@ import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -17,6 +18,8 @@ import java.util.logging.Level;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.comphenix.protocol.events.InternalStructure;
+import com.comphenix.protocol.wrappers.Vector3F;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.block.Block;
@@ -39,6 +42,7 @@ import com.useful.ucars.util.UEntityMeta;
 import com.useful.ucars.util.UMeta;
 
 import net.milkbowl.vault.economy.Economy;
+import org.bukkit.util.Vector;
 
 public class ucars extends JavaPlugin {
 	// The main file
@@ -144,26 +148,59 @@ public class ucars extends JavaPlugin {
 			 * PacketAdapter(plugin, ConnectionSide.CLIENT_SIDE,
 			 * ListenerPriority.NORMAL, 0x1b) {
 			 */
-			
-			((ProtocolManager) this.protocolManager).addPacketListener(
-					  new PacketAdapter(this, PacketType.Play.Client.STEER_VEHICLE) {
-						  @Override
-						  public void onPacketReceiving(final PacketEvent event) {
-								PacketContainer packet = event.getPacket();
-								final float sideways = packet.getFloat().read(0);
-								final float forwards = packet.getFloat().read(1);
-								final boolean jumping = packet.getBooleans().read(0);
-								Bukkit.getScheduler().runTask(ucars.plugin, new Runnable(){
 
-									@Override
-									public void run() {
-										MotionManager.move(event.getPlayer(), forwards,
-												sideways, jumping);
-										return;
-									}});
-								
-						  }
-					});
+			if(MCVersion.get(0) == 1) {
+				if (MCVersion.get(1) >= 22 || MCVersion.get(1) == 21 && MCVersion.get(2) >= 2) {
+					MotionManager.MOVE_INTENT = new MoveIntent(0F, 0F, false);
+
+					((ProtocolManager) this.protocolManager).addPacketListener(
+							new PacketAdapter(this, PacketType.Play.Client.STEER_VEHICLE) {
+								@Override
+								public void onPacketReceiving(final PacketEvent event) {
+									PacketContainer packet = event.getPacket();
+
+									InternalStructure struct = packet.getStructures().getValues().getFirst();
+									// forward, backward, left, right, jump, shift, sprint
+									List<Boolean> bools = struct.getBooleans().getValues();
+									float forwards = bools.get(0) ? 1F : bools.get(1) ? -1F : 0F;
+									float sideways = bools.get(2) ? 1F : bools.get(3) ? -1F : 0F;
+									boolean jumping = bools.get(4);
+
+									Bukkit.getScheduler().runTask(ucars.plugin, new Runnable() {
+
+										@Override
+										public void run() {
+											MotionManager.MOVE_INTENT.update(forwards, sideways, jumping);
+											return;
+										}
+									});
+
+								}
+							});
+				}
+				else
+					((ProtocolManager) this.protocolManager).addPacketListener(
+							new PacketAdapter(this, PacketType.Play.Client.STEER_VEHICLE) {
+								@Override
+								public void onPacketReceiving(final PacketEvent event) {
+									PacketContainer packet = event.getPacket();
+
+									final float forwards = packet.getFloat().read(1);
+									final float sideways = packet.getFloat().read(0);
+									final boolean jumping = packet.getBooleans().read(0);
+									Bukkit.getScheduler().runTask(ucars.plugin, new Runnable() {
+
+										@Override
+										public void run() {
+											MotionManager.move(event.getPlayer(), forwards,
+													sideways, jumping);
+											return;
+										}
+									});
+
+								}
+							});
+			}
 		} catch (Exception e) {
 			return false;
 		}
@@ -174,10 +211,10 @@ public class ucars extends JavaPlugin {
 	public void onEnable() {
 		plugin = this;
 
-		Pattern pattern = Pattern.compile(".v(.*?)_R");		//Get MC-Version
-		Matcher matcher = pattern.matcher(Bukkit.getServer().getClass().getPackage().getName());
+		Pattern pattern = Pattern.compile("\\(MC: (\\d\\.\\d+(?:\\.\\d+)?)");	//Get MC-Version
+		Matcher matcher = pattern.matcher(Bukkit.getVersion());
 		if(matcher.find()) {
-			String[] MCVersionStr = matcher.group(1).split("_");
+			String[] MCVersionStr = matcher.group(1).split("\\.");
 			for(String s:MCVersionStr) {
 				MCVersion.add(Integer.parseInt(s));
 			}
@@ -781,10 +818,10 @@ public class ucars extends JavaPlugin {
 		return getAPI().isPluginHooked(plugin);
 	}
 	
-	public Plugin getPlugin(String name){
+	public Plugin getPlugin(String name) {
 		try {
-			for(Plugin p:this.hookedPlugins){
-				if(p.getName().equalsIgnoreCase(name)){
+			for (Plugin p : this.hookedPlugins) {
+				if (p.getName().equalsIgnoreCase(name)) {
 					return p;
 				}
 			}
