@@ -42,24 +42,24 @@ public abstract class AbstractPacket {
 	 * @param receiver - the receiver.
 	 * @throws RuntimeException If the packet cannot be sent.
 	 */
-	public void sendPacket(Player receiver) {
-		try {
-			ProtocolLibrary.getProtocolManager().sendServerPacket(receiver, getHandle());
-		} catch (InvocationTargetException e) {
-			throw new RuntimeException("Cannot send packet.", e);
-		}
-	}
+//	public void sendPacket(Player receiver) {
+//		try {
+//			ProtocolLibrary.getProtocolManager().sendServerPacket(receiver, getHandle());
+//		} catch (InvocationTargetException e) {
+//			throw new RuntimeException("Cannot send packet.", e);
+//		}
+//	}
 	
 	/**
 	 * Simulate receiving the current packet from the given sender.
 	 * @param sender - the sender.
 	 * @throws RuntimeException If the packet cannot be received.
 	 */
-	public void recievePacket(Player sender) {
-		try {
-			ProtocolLibrary.getProtocolManager().recieveClientPacket(sender, getHandle());
-		} catch (Exception e) {
-			throw new RuntimeException("Cannot recieve packet.", e);
-		}
-	}
+//	public void recievePacket(Player sender) {
+//		try {
+//			ProtocolLibrary.getProtocolManager().recieveClientPacket(sender, getHandle());
+//		} catch (Exception e) {
+//			throw new RuntimeException("Cannot recieve packet.", e);
+//		}
+//	}
 }
